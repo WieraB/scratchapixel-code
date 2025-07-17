@@ -8,6 +8,7 @@
 #include "geometry.h"
 #include <fstream>
 #include <chrono>
+#include <memory>
 
 #include "cow.h"
 
@@ -131,13 +132,13 @@ int main(int argc, char **argv)
         focalLength,
         t, b, l, r);
     
-    Vec3<unsigned char> *frameBuffer = new Vec3<unsigned char>[imageWidth * imageHeight];
+    auto frameBuffer = std::make_unique<Vec3<unsigned char>[]>(imageWidth * imageHeight);
 
     for (uint32_t i = 0; i < imageWidth * imageHeight; ++i) {
 		frameBuffer[i] = Vec3<unsigned char>(255);
 	}
 
-    float *depthBuffer = new float[imageWidth * imageHeight];
+    auto depthBuffer = std::make_unique<float[]>(imageWidth * imageHeight);
 
     for (uint32_t i = 0; i < imageWidth * imageHeight; ++i) {
 		depthBuffer[i] = farClippingPLane;
@@ -236,11 +237,8 @@ int main(int argc, char **argv)
 	std::ofstream ofs;
 	ofs.open("./output.ppm", std::ios::binary);
 	ofs << "P6\n" << imageWidth << " " << imageHeight << "\n255\n";
-	ofs.write((char*)frameBuffer, imageWidth * imageWidth * 3);
+    ofs.write(reinterpret_cast<char*>(frameBuffer.get()), imageWidth * imageHeight * 3);
 	ofs.close();
-    
-	delete [] frameBuffer;
-	delete [] depthBuffer;
     
     return 0;
 }
