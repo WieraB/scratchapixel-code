@@ -135,18 +135,9 @@ int main(int argc, char **argv)
         focalLength,
         t, b, l, r);
     
-    auto frameBuffer = std::make_unique<Vec3<unsigned char>[]>(imageWidth * imageHeight);
-
-    for (uint32_t i = 0; i < imageWidth * imageHeight; ++i) {
-		frameBuffer[i] = Vec3<unsigned char>(255);
-	}
-
-    auto depthBuffer = std::make_unique<float[]>(imageWidth * imageHeight);
-
-    for (uint32_t i = 0; i < imageWidth * imageHeight; ++i) {
-		depthBuffer[i] = farClippingPLane;
-	}
-
+    std::vector<Vec3<unsigned char>> frameBuffer(imageWidth * imageHeight, Vec3<unsigned char>(255));
+    std::vector<float> depthBuffer(imageWidth * imageHeight, farClippingPLane);
+    
     auto t_start = std::chrono::high_resolution_clock::now();
     
     for (uint32_t i = 0; i < ntris; ++i) {
@@ -240,7 +231,7 @@ int main(int argc, char **argv)
 	std::ofstream ofs;
 	ofs.open("./output.ppm", std::ios::binary);
 	ofs << "P6\n" << imageWidth << " " << imageHeight << "\n255\n";
-    ofs.write(reinterpret_cast<char*>(frameBuffer.get()), imageWidth * imageHeight * 3);
+    ofs.write(reinterpret_cast<char*>(frameBuffer.data()), imageWidth * imageHeight * 3);
 	ofs.close();
     
     return 0;
