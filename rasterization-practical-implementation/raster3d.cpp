@@ -9,6 +9,9 @@
 #include <fstream>
 #include <chrono>
 #include <memory>
+#include <ranges>
+#include <algorithm>
+#include <array>
 
 #include "cow.h"
 
@@ -97,10 +100,10 @@ void convertToRaster(
 }
 
 float min3(const float &a, const float &b, const float &c)
-{ return std::min(a, std::min(b, c)); }
+{ return std::ranges::min(std::array{a, b, c}); } 
 
 float max3(const float &a, const float &b, const float &c)
-{ return std::max(a, std::max(b, c)); }
+{ return std::ranges::max(std::array{a, b, c}); }
 
 float edgeFunction(const Vec3f &a, const Vec3f &b, const Vec3f &c)
 { return (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0]); }

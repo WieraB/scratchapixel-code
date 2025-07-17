@@ -1,3 +1,4 @@
 *.out
 *.ppm
 raster3d
+raster3d_trial.cpp
