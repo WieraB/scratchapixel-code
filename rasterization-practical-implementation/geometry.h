@@ -503,6 +503,26 @@ public:
 
 typedef Matrix44<float> Matrix44f;
 
+struct triangle {
+    Vec3f v0, v1, v2;
+    Vec3f v0Raster, v1Raster, v2Raster;
+    Vec2f st0, st1, st2;
+    float area;
+    uint32_t x0, y0, x1, y1;
+    bool visibility;
+};
+
+struct setupParams {
+    uint32_t imageWidth, imageHeight, imageArea;
+    float nearClippingPlane, farClippingPLane;
+    float focalLength;
+    float filmApertureWidth, filmApertureHeight;
+    Matrix44f worldToCamera;
+    Matrix44f cameraToWorld;
+    float top, bottom, left, right;
+};
+
+
 //[comment]
 // Testing our code. To test the matrix inversion code, we used Maya to output
 // the values of a matrix and its inverse (check the video at the top of this page). Of course this implies
