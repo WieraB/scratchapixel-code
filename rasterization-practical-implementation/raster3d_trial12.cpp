@@ -5,6 +5,7 @@
 
 #define _USE_MATH_DEFINES 
 
+// #include "geometry.h"
 #include <fstream>
 #include <chrono>
 #include <memory>
@@ -14,7 +15,9 @@
 #include <vector>
 #include <thread>
 #include <execution>
-#include "functions.cpp"
+#include "functions_new.cpp"
+
+// #include "cow.h"
 
 const uint32_t ntris = 3156;
 

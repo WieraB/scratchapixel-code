@@ -13,10 +13,8 @@
 #include <algorithm>
 #include <array>
 #include <vector>
-#include </usr/local/include/eigen/Eigen/Dense>
 
-
-using Eigen::Matrix;
+#include "cow.h"
 
 static const float inchToMm = 25.4;
 enum FitResolutionGate { kFill = 0, kOverscan };
@@ -192,4 +190,96 @@ void assignPixelColour(
         }
     }
 
+}
+
+void assignPixelColoursToTile(
+    std::vector<triangle>& triangles, 
+    setupParams &params,
+    std::vector<int> &tileBin,
+    uint32_t xStart, uint32_t yStart,
+    uint32_t xEnd, uint32_t yEnd,
+    std::vector<float> &depthBuffer,
+    std::vector<Vec3<unsigned char>> &frameBuffer
+)
+{
+    for (int i : tileBin) {
+        const triangle& tri = triangles[i];
+        if (!tri.visibility) continue;
+
+            for (uint32_t y = std::max(tri.y0, yStart); y <= std::min(tri.y1, yEnd - 1); ++y) {
+                for (uint32_t x = std::max(tri.x0, xStart); x <= std::min(tri.x1, xEnd - 1); ++x) {
+                    assignPixelColour(tri, x, y, params, depthBuffer, frameBuffer);
+                }
+            }
+        }
+}
+
+void projectTriangleToRasterRange(
+    std::vector<triangle>& triangles, 
+    setupParams &params, 
+    uint32_t start, uint32_t end,
+    std::vector<std::vector<std::vector<int>>> &tileBins,
+    int tilesX, int tilesY, int tileSize,
+    std::mutex *m
+) 
+{
+    for (uint32_t i = start; i < end; ++i) {
+        triangle tri;
+
+        tri.v0 = vertices[nvertices[i * 3]];
+        tri.v1 = vertices[nvertices[i * 3 + 1]];
+        tri.v2 = vertices[nvertices[i * 3 + 2]];
+
+        tri.st0 = st[stindices[i * 3]];
+        tri.st1 = st[stindices[i * 3 + 1]];
+        tri.st2 = st[stindices[i * 3 + 2]];
+            
+        try {
+            tri.visibility = true;
+            projectTriangleToRaster(tri, params);
+        } catch (const std::invalid_argument &e) {
+            tri.visibility = false;
+            continue;
+        }
+
+        triangles[i] = tri;
+
+        int x0 = tri.x0 / tileSize;
+        int x1 = tri.x1 / tileSize;
+        int y0 = tri.y0 / tileSize;
+        int y1 = tri.y1 / tileSize;
+        
+        for (int ty = y0; ty <= y1; ++ty) {
+            for (int tx = x0; tx <= x1; ++tx) {
+                if (tx >= 0 && tx < tilesX && ty >= 0 && ty < tilesY) {
+                    tileBins[ty][tx].push_back(i);
+                }
+            }
+        }
+
+    }
+}
+
+void assignPixelColoursToTileRange(
+    std::vector<triangle>& triangles, 
+    setupParams &params, 
+    std::vector<std::vector<std::vector<int>>> &tileBins,
+    std::vector<std::pair<int, int>> &tileJobs,
+    uint32_t start, uint32_t end,
+    const int tileSize,
+    std::vector<float> &depthBuffer,
+    std::vector<Vec3<unsigned char>> &frameBuffer
+) 
+{
+    for (uint32_t i = start; i < end; ++i) {
+            int ty = tileJobs[i].first;
+            int tx = tileJobs[i].second;
+
+            uint32_t xStart = tx * tileSize;
+            uint32_t yStart = ty * tileSize;
+            uint32_t xEnd = std::min(xStart + tileSize, params.imageWidth);
+            uint32_t yEnd = std::min(yStart + tileSize, params.imageHeight);
+
+            assignPixelColoursToTile(triangles, params, tileBins[ty][tx], xStart, yStart, xEnd, yEnd, depthBuffer, frameBuffer);
+    }
 }
