@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 #include "cow.h"
 
@@ -153,15 +154,6 @@ void assignPixelColour(
     std::vector<Vec3<unsigned char>> &frameBuffer
 )
 {
-/*     Vec3f pixelSample(x + 0.5, y + 0.5, 0);
-    float w0 = edgeFunction(tri.v1Raster, tri.v2Raster, pixelSample);
-    float w1 = edgeFunction(tri.v2Raster, tri.v0Raster, pixelSample);
-    float w2 = edgeFunction(tri.v0Raster, tri.v1Raster, pixelSample); */
-
-/*     float w0 = w[0] + j * w[3] - i * w[4];
-    float w1 = w[1] + j * w[5] - i * w[6];
-    float w2 = w[2] + j * w[7] - i * w[8]; */
-
     float w0 = w[0];
     float w1 = w[1];
     float w2 = w[2];
@@ -322,4 +314,42 @@ void assignPixelColoursToTileRange(
 
             assignPixelColoursToTile(triangles, params, tileBins[ty][tx], xStart, yStart, xEnd, yEnd, depthBuffer, frameBuffer);
     }
+}
+
+void saveOutput(
+    const std::string& filename,
+    const setupParams &params, 
+    std::vector<Vec3<unsigned char>> &frameBuffer
+) 
+{
+    std::ofstream ofs(filename, std::ios::binary);
+    ofs << "P6\n" << params.imageWidth << " " << params.imageHeight << "\n255\n";
+    ofs.write(reinterpret_cast<char*>(frameBuffer.data()), params.imageArea * 3);
+    ofs.close();
+}
+
+using json = nlohmann::json;
+void readInput(
+    const std::string& filename,
+    setupParams &params
+) 
+{
+    std::ifstream in(filename);
+    json j;
+    in >> j;
+
+    params.imageWidth = j["imageWidth"];
+    params.imageHeight = j["imageHeight"];
+    params.nearClippingPlane = j["nearClippingPlane"];
+    params.farClippingPLane = j["farClippingPlane"];
+    params.focalLength = j["focalLength"];
+    params.filmApertureWidth = j["filmApertureWidth"];
+    params.filmApertureHeight = j["filmApertureHeight"];
+    std::array<float, 16> flat = j["worldToCamera"];
+    params.worldToCamera = Matrix44f(
+        flat[0], flat[1], flat[2], flat[3],
+        flat[4], flat[5], flat[6], flat[7],
+        flat[8], flat[9], flat[10], flat[11],
+        flat[12], flat[13], flat[14], flat[15]
+    );
 }

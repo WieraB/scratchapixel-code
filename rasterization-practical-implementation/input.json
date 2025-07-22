@@ -1,0 +1,15 @@
+{
+  "imageWidth": 640,
+  "imageHeight": 480,
+  "nearClippingPlane": 1,
+  "farClippingPlane": 1000,
+  "focalLength": 20,
+  "filmApertureWidth": 0.980,
+  "filmApertureHeight": 0.735,
+  "worldToCamera": [
+    0.707107, -0.331295, 0.624695, 0,
+    0, 0.883452, 0.468521, 0,
+    -0.707107, -0.331295, 0.624695, 0,
+    -1.63871, -5.747777, -40.400412, 1
+  ]
+}

@@ -5,7 +5,6 @@
 
 #define _USE_MATH_DEFINES 
 
-// #include "geometry.h"
 #include <fstream>
 #include <chrono>
 #include <memory>
@@ -17,8 +16,6 @@
 #include <execution>
 #include "functions.cpp"
 
-// #include "cow.h"
-
 const uint32_t ntris = 3156;
 
 int main(int argc, char **argv)
@@ -26,20 +23,9 @@ int main(int argc, char **argv)
     // Define parameters and vectors
 
     setupParams params;
-    
-    params.imageWidth = 640;
-    params.imageHeight = 480;
+    readInput("./input.json", params);
     params.imageArea = params.imageWidth * params.imageHeight;
-
-    params.worldToCamera = {0.707107, -0.331295, 0.624695, 0, 0, 0.883452, 0.468521, 0, -0.707107, -0.331295, 0.624695, 0, -1.63871, -5.747777, -40.400412, 1};
     params.cameraToWorld = params.worldToCamera.inverse();
-
-    params.nearClippingPlane = 1;
-    params.farClippingPLane = 1000;
-    params.focalLength = 20; // in mm
-
-    params.filmApertureWidth = 0.980;
-    params.filmApertureHeight = 0.735;
 
     computeScreenCoordinates(params, kOverscan);
 
@@ -128,11 +114,9 @@ int main(int argc, char **argv)
     auto passedTime = std::chrono::duration<double, std::milli>(t_end - t_start).count();
 	std::cerr << "Wall passed time: " << passedTime << "ms" << std::endl;
     
-	std::ofstream ofs;
-	ofs.open("./output.ppm", std::ios::binary);
-	ofs << "P6\n" << params.imageWidth << " " << params.imageHeight << "\n255\n";
-    ofs.write(reinterpret_cast<char*>(frameBuffer.data()), params.imageArea * 3);
-	ofs.close();
+    // Save the output to a file
+    std::string filename = "./output.ppm";
+    saveOutput(filename, params, frameBuffer);
     
     return 0;
 }
