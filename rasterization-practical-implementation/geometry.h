@@ -507,6 +507,7 @@ struct triangle {
     Vec3f v0, v1, v2;
     Vec3f v0Raster, v1Raster, v2Raster;
     Vec2f st0, st1, st2;
+    Vec2f edge0, edge1, edge2;
     float area;
     uint32_t x0, y0, x1, y1;
     bool visibility;

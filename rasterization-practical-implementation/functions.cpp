@@ -135,20 +135,37 @@ void projectTriangleToRaster(
     tri.y1 = std::min(int32_t(params.imageHeight) - 1, (int32_t)(std::floor(ymax)));
 
     tri.area = edgeFunction(tri.v0Raster, tri.v1Raster, tri.v2Raster);
+    tri.edge1.y = tri.v2Raster[1] - tri.v1Raster[1];
+    tri.edge1.x = tri.v2Raster[0] - tri.v1Raster[0];
+    tri.edge2.y = tri.v0Raster[1] - tri.v2Raster[1];
+    tri.edge2.x = tri.v0Raster[0] - tri.v2Raster[0];
+    tri.edge0.y = tri.v1Raster[1] - tri.v0Raster[1];
+    tri.edge0.x = tri.v1Raster[0] - tri.v0Raster[0];
 }
 
 void assignPixelColour(
     const triangle &tri,
+    const uint32_t &j, const uint32_t &i,
     const uint32_t &x, const uint32_t &y,
+    std::vector<float> &w,
     setupParams &params,
     std::vector<float> &depthBuffer,
     std::vector<Vec3<unsigned char>> &frameBuffer
 )
 {
-    Vec3f pixelSample(x + 0.5, y + 0.5, 0);
+/*     Vec3f pixelSample(x + 0.5, y + 0.5, 0);
     float w0 = edgeFunction(tri.v1Raster, tri.v2Raster, pixelSample);
     float w1 = edgeFunction(tri.v2Raster, tri.v0Raster, pixelSample);
-    float w2 = edgeFunction(tri.v0Raster, tri.v1Raster, pixelSample);
+    float w2 = edgeFunction(tri.v0Raster, tri.v1Raster, pixelSample); */
+
+/*     float w0 = w[0] + j * w[3] - i * w[4];
+    float w1 = w[1] + j * w[5] - i * w[6];
+    float w2 = w[2] + j * w[7] - i * w[8]; */
+
+    float w0 = w[0];
+    float w1 = w[1];
+    float w2 = w[2];
+
     if (w0 >= 0 && w1 >= 0 && w2 >= 0) {
         w0 /= tri.area;
         w1 /= tri.area;
@@ -206,12 +223,35 @@ void assignPixelColoursToTile(
         const triangle& tri = triangles[i];
         if (!tri.visibility) continue;
 
-            for (uint32_t y = std::max(tri.y0, yStart); y <= std::min(tri.y1, yEnd - 1); ++y) {
-                for (uint32_t x = std::max(tri.x0, xStart); x <= std::min(tri.x1, xEnd - 1); ++x) {
-                    assignPixelColour(tri, x, y, params, depthBuffer, frameBuffer);
-                }
+        uint32_t y0Pix = std::max(tri.y0, yStart);
+        uint32_t y1Pix = std::min(tri.y1, yEnd - 1);
+        uint32_t x0Pix = std::max(tri.x0, xStart);
+        uint32_t x1Pix = std::min(tri.x1, xEnd - 1);
+
+        Vec3f pixelSample0(x0Pix + 0.5, y0Pix + 0.5, 0);
+        std::vector<float> wxCount(3);
+        std::vector<float> wyCount(3);
+        wyCount[0] = edgeFunction(tri.v1Raster, tri.v2Raster, pixelSample0) ;
+        wyCount[1] = edgeFunction(tri.v2Raster, tri.v0Raster, pixelSample0);
+        wyCount[2] = edgeFunction(tri.v0Raster, tri.v1Raster, pixelSample0);
+
+        for (uint32_t i = 0; i <= y1Pix - y0Pix; ++i) {
+            wxCount[0] = wyCount[0];
+            wxCount[1] = wyCount[1];
+            wxCount[2] = wyCount[2];
+            for (uint32_t j = 0; j <= x1Pix - x0Pix; ++j) {
+                uint32_t x = x0Pix + j;
+                uint32_t y = y0Pix + i;
+                assignPixelColour(tri, j, i, x, y, wxCount, params, depthBuffer, frameBuffer);
+                wxCount[0] += tri.edge1.y;
+                wxCount[1] += tri.edge2.y;
+                wxCount[2] += tri.edge0.y;
             }
+            wyCount[0] -= tri.edge1.x;
+            wyCount[1] -= tri.edge2.x;
+            wyCount[2] -= tri.edge0.x;
         }
+    }
 }
 
 void projectTriangleToRasterRange(
