@@ -202,11 +202,11 @@ void assignPixelColour(
 }
 
 void assignPixelColoursToTile(
-    std::vector<triangle>& triangles, 
+    const std::vector<triangle>& triangles, 
     setupParams &params,
-    std::vector<int> &tileBin,
-    uint32_t xStart, uint32_t yStart,
-    uint32_t xEnd, uint32_t yEnd,
+    const std::vector<int> &tileBin,
+    const uint32_t xStart, const uint32_t yStart,
+    const uint32_t xEnd, const uint32_t yEnd,
     std::vector<float> &depthBuffer,
     std::vector<Vec3<unsigned char>> &frameBuffer
 )
@@ -249,10 +249,10 @@ void assignPixelColoursToTile(
 void projectTriangleToRasterRange(
     std::vector<triangle>& triangles, 
     setupParams &params, 
-    uint32_t start, uint32_t end,
+    const uint32_t start, const uint32_t end,
     std::vector<std::vector<std::vector<int>>> &tileBins,
-    int tilesX, int tilesY, int tileSize,
-    std::mutex *m
+    const int tilesX, const int tilesY, const int tileSize,
+    const std::mutex *m
 ) 
 {
     for (uint32_t i = start; i < end; ++i) {
@@ -281,11 +281,9 @@ void projectTriangleToRasterRange(
         int y0 = tri.y0 / tileSize;
         int y1 = tri.y1 / tileSize;
         
-        for (int ty = y0; ty <= y1; ++ty) {
-            for (int tx = x0; tx <= x1; ++tx) {
-                if (tx >= 0 && tx < tilesX && ty >= 0 && ty < tilesY) {
-                    tileBins[ty][tx].push_back(i);
-                }
+        for (int ty = y0; ty <= y1; ++ty) { // Loop through tiles in Y direction
+            for (int tx = x0; tx <= x1; ++tx) { // Loop through tiles in X direction
+                tileBins[ty][tx].push_back(i);
             }
         }
 
@@ -293,10 +291,10 @@ void projectTriangleToRasterRange(
 }
 
 void assignPixelColoursToTileRange(
-    std::vector<triangle>& triangles, 
+    const std::vector<triangle>& triangles, 
     setupParams &params, 
-    std::vector<std::vector<std::vector<int>>> &tileBins,
-    std::vector<std::pair<int, int>> &tileJobs,
+    const std::vector<std::vector<std::vector<int>>> &tileBins,
+    const std::vector<std::pair<int, int>> &tileJobs,
     uint32_t start, uint32_t end,
     const int tileSize,
     std::vector<float> &depthBuffer,
@@ -352,4 +350,66 @@ void readInput(
         flat[8], flat[9], flat[10], flat[11],
         flat[12], flat[13], flat[14], flat[15]
     );
+    params.numThreadsTriangles = j["numThreadsTriangles"];
+    params.numThreadsTiles = j["numThreadsTiles"];
+    params.tileSize = j["tileSize"];
+}
+
+
+std::streampos skipPPMHeader(std::ifstream& file) {
+    std::string line;
+    int headerLines = 0;
+    while (headerLines < 3 && std::getline(file, line)) {
+        if (!line.empty() && line[0] != '#') {
+            ++headerLines;
+        }
+    }
+    return file.tellg(); // return position after header
+}
+
+
+bool comparePPMFiles(const std::string& file1, const std::string& file2) {
+
+    std::ifstream f1(file1, std::ios::binary);
+    std::ifstream f2(file2, std::ios::binary);
+
+    if (!f1 || !f2) {
+        std::cerr << "Failed to open one or both files.\n";
+        return false;
+    }
+
+    std::streampos dataStart1 = skipPPMHeader(f1);
+    std::streampos dataStart2 = skipPPMHeader(f2);
+
+    f1.seekg(0, std::ios::end);
+    f2.seekg(0, std::ios::end);
+    std::streampos size1 = f1.tellg() - dataStart1;
+    std::streampos size2 = f2.tellg() - dataStart2;
+
+    if (size1 != size2) {
+        std::cerr << "Different image sizes or headers.\n";
+    }
+
+    f1.seekg(dataStart1);
+    f2.seekg(dataStart2);
+
+    char byte1, byte2;
+    size_t mismatchCount = 0;
+    size_t totalBytes = size1;
+
+    for (size_t i = 0; i < totalBytes; ++i) {
+        f1.read(&byte1, 1);
+        f2.read(&byte2, 1);
+        if (byte1 != byte2) {
+            ++mismatchCount;
+        }
+    }
+
+    if (mismatchCount == 0) {
+        std::cout << "PPM files match.\n";
+        return true;
+    } else {
+        std::cout << "PPM files differ in " << mismatchCount << " bytes.\n";
+        return false;
+    }
 }

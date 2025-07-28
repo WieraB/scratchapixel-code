@@ -33,9 +33,8 @@ int main(int argc, char **argv)
     std::vector<float> depthBuffer(params.imageArea, params.farClippingPLane);
     std::vector<triangle> triangles(ntris);
 
-    const int tileSize = 32;
-    int tilesX = (params.imageWidth + tileSize - 1) / tileSize; 
-    int tilesY = (params.imageHeight + tileSize - 1) / tileSize;
+    int tilesX = (params.imageWidth + params.tileSize - 1) / params.tileSize; // Calculate number of tiles in X direction
+    int tilesY = (params.imageHeight + params.tileSize - 1) / params.tileSize; // Calculate number of tiles in Y direction
     std::vector<std::vector<std::vector<int>>> tileBins(tilesY, std::vector<std::vector<int>>(tilesX));
 
     std::vector<std::pair<int, int>> tileJobs;
@@ -46,16 +45,14 @@ int main(int argc, char **argv)
     }
     uint32_t totalTiles = tileJobs.size();
 
-    const unsigned int numThreadsTriangles = 16;
     std::vector<std::thread> threadsTriangles;
-    uint32_t sectionSizeTriangles = ntris / numThreadsTriangles;
-    const unsigned int numThreadsTiles = 16;
+    uint32_t sectionSizeTriangles = ntris / params.numThreadsTriangles;
     std::vector<std::thread> threadsTiles;
-    uint32_t sectionSizeTiles = (totalTiles + numThreadsTiles - 1) / numThreadsTiles;
+    uint32_t sectionSizeTiles = (totalTiles + params.numThreadsTiles - 1) / params.numThreadsTiles;
     std::mutex m;
 
     std::vector<std::vector<std::vector<std::vector<int>>>> threadLocalBins(
-    numThreadsTriangles,
+    params.numThreadsTriangles,
     std::vector<std::vector<std::vector<int>>>(
         tilesY, std::vector<std::vector<int>>(tilesX)
     )
@@ -66,13 +63,13 @@ int main(int argc, char **argv)
     // Project triangles to raster space and assign projected triangles to tiles (tile-based rasterisation)
     // One thread per section of triangles is used
 
-    for (unsigned int t = 0; t < numThreadsTriangles; ++t) {
+    for (unsigned int t = 0; t < params.numThreadsTriangles; ++t) {
         uint32_t start = t * sectionSizeTriangles;
-        uint32_t end = (t == numThreadsTriangles - 1) ? ntris : start + sectionSizeTriangles;
+        uint32_t end = (t == params.numThreadsTriangles - 1) ? ntris : start + sectionSizeTriangles;
         threadsTriangles.emplace_back(projectTriangleToRasterRange, 
             std::ref(triangles), std::ref(params), 
             start, end, 
-            std::ref(threadLocalBins[t]), tilesX, tilesY, tileSize, 
+            std::ref(threadLocalBins[t]), tilesX, tilesY, params.tileSize, 
             &m);
     }
 
@@ -81,7 +78,7 @@ int main(int argc, char **argv)
     }
 
     // Merge thread-local bins into global tile bins
-    for (int t = 0; t < numThreadsTriangles; ++t) {
+    for (int t = 0; t < params.numThreadsTriangles; ++t) {
         for (int ty = 0; ty < tilesY; ++ty) {
             for (int tx = 0; tx < tilesX; ++tx) {
                 auto& local = threadLocalBins[t][ty][tx];
@@ -93,7 +90,7 @@ int main(int argc, char **argv)
 
     // Assign pixel colours to tiles, one thread per section of tiles is used
 
-    for (unsigned int t = 0; t < numThreadsTiles; ++t) {
+    for (unsigned int t = 0; t < params.numThreadsTiles; ++t) {
         uint32_t start = t * sectionSizeTiles;
         uint32_t end = std::min(start + sectionSizeTiles, totalTiles);
 
@@ -101,7 +98,7 @@ int main(int argc, char **argv)
             std::ref(triangles), std::ref(params), 
             std::ref(tileBins), std::ref(tileJobs), 
             start, end, 
-            tileSize,
+            params.tileSize,
             std::ref(depthBuffer), std::ref(frameBuffer)
         );
     }
@@ -117,6 +114,9 @@ int main(int argc, char **argv)
     // Save the output to a file
     std::string filename = "./output.ppm";
     saveOutput(filename, params, frameBuffer);
+
+
+    comparePPMFiles("./output.ppm", "./output_reference.ppm");
     
     return 0;
 }

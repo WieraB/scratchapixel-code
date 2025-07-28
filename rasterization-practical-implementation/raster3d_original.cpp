@@ -234,9 +234,9 @@ int main(int argc, char **argv)
 	std::cerr << "Wall passed time: " << passedTime << "ms" << std::endl;
     
 	std::ofstream ofs;
-	ofs.open("./output.ppm", std::ios::binary);
+	ofs.open("./output_reference.ppm", std::ios::binary);
 	ofs << "P6\n" << imageWidth << " " << imageHeight << "\n255\n";
-	ofs.write((char*)frameBuffer, imageWidth * imageWidth * 3);
+	ofs.write((char*)frameBuffer, imageWidth * imageHeight * 3);
 	ofs.close();
     
 	delete [] frameBuffer;

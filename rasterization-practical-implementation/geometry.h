@@ -521,6 +521,9 @@ struct setupParams {
     Matrix44f worldToCamera;
     Matrix44f cameraToWorld;
     float top, bottom, left, right;
+    unsigned int numThreadsTriangles;
+    unsigned int numThreadsTiles;
+    int tileSize;
 };
 
 
